@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ==========================================================================
+      # ビルドプロファイル（ワークショップ）: 次の SLOW / FAST のどちらか一方だけを有効にする
+      # - 初期状態（main 向け）: SLOW が有効 → Datadog でパイプライン時間を確認
+      # - 演習: SLOW をコメントアウトし FAST を有効化して dev に push → 実行時間を比較
+      # ==========================================================================
+
+      # ----- SLOW BUILD（デフォルト） -----
+      - name: Set up Node.js (npm cache なし — 遅めのインストール)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Artificial delay (ワークショップ用 — FAST ではこのステップごと削除)
+        run: |
+          echo "Simulating a slow CI step for Datadog comparison..."
+          sleep 45
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ----- FAST BUILD（上の SLOW ブロックをコメントアウトしてから、下を有効化） -----
+      # - name: Set up Node.js (with npm cache)
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version-file: ".nvmrc"
+      #     cache: "npm"
+      #
+      # - name: Install dependencies
+      #   run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build static site
+        run: npm run build
+
+      - name: Upload artifact for deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-dist
+          path: dist/
+
+  deploy-github-pages:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-dist
+          path: dist
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+  # --------------------------------------------------------------------------
+  # EC2 へのデプロイ例（本ワークショップでは使用しない — 必要なら Secrets を設定して有効化）
+  # --------------------------------------------------------------------------
+  # deploy-ec2:
+  #   name: Deploy to EC2 (example)
+  #   needs: build
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: site-dist
+  #         path: dist
+  #     - name: Sync to EC2 (placeholder)
+  #       run: |
+  #         # eval "$(ssh-agent -s)"
+  #         # echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" | ssh-add -
+  #         # rsync -avz --delete dist/ "deploy@${{ secrets.EC2_HOST }}:/var/www/html/"
+  #         echo "Uncomment and set EC2_HOST and EC2_SSH_PRIVATE_KEY in repository secrets."
