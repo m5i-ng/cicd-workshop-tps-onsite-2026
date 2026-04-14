@@ -28,18 +28,18 @@ jobs:
       - uses: actions/checkout@v4
 
       # ==========================================================================
-      # ビルドプロファイル（ワークショップ）: 次の SLOW / FAST のどちらか一方だけを有効にする
-      # - 初期状態（main 向け）: SLOW が有効 → Datadog でパイプライン時間を確認
-      # - 演習: SLOW をコメントアウトし FAST を有効化して dev に push → 実行時間を比較
+      # Build profile (workshop): enable only ONE of the SLOW / FAST blocks below.
+      # - Initial state (for main): SLOW enabled — inspect pipeline duration in Datadog
+      # - Exercise: comment out SLOW, enable FAST, push to dev — compare duration
       # ==========================================================================
 
-      # ----- SLOW BUILD（デフォルト） -----
-      - name: Set up Node.js (npm cache なし — 遅めのインストール)
+      # ----- SLOW BUILD (default) -----
+      - name: Set up Node.js (no npm cache — slower install)
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
 
-      - name: Artificial delay (ワークショップ用 — FAST ではこのステップごと削除)
+      - name: Artificial delay (workshop — remove this entire step in the FAST profile)
         run: |
           echo "Simulating a slow CI step for Datadog comparison..."
           sleep 45
@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ----- FAST BUILD（上の SLOW ブロックをコメントアウトしてから、下を有効化） -----
+      # ----- FAST BUILD (comment out the SLOW block above, then enable below) -----
       # - name: Set up Node.js (with npm cache)
       #   uses: actions/setup-node@v4
       #   with:
@@ -94,7 +94,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   # --------------------------------------------------------------------------
-  # EC2 へのデプロイ例（本ワークショップでは使用しない — 必要なら Secrets を設定して有効化）
+  # EC2 deploy example (not used in this workshop — enable with repository secrets if needed)
   # --------------------------------------------------------------------------
   # deploy-ec2:
   #   name: Deploy to EC2 (example)
